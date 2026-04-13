@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Narratek — QA · Localization · Narrative Design · Content</title>
+<meta name="description" content="Senior QA Specialist, Polish Localization Expert, Narrative Designer and Content Writer. 7 years iGaming experience. Remote worldwide.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Lora:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0b;
+  --bg2:#111113;
+  --bg3:#18181b;
+  --line:#2a2a2f;
+  --text:#e8e8ea;
+  --muted:#6b6b72;
+  --accent:#c8f55a;
+  --accent2:#5af5c8;
+  --danger:#f55a5a;
+  --font-display:'Syne',sans-serif;
+  --font-mono:'DM Mono',monospace;
+  --font-serif:'Lora',serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-display);overflow-x:hidden;cursor:none}
+
+/* custom cursor */
+.cursor{position:fixed;width:8px;height:8px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transition:transform .15s ease;mix-blend-mode:difference}
+.cursor-ring{position:fixed;width:32px;height:32px;border:1px solid var(--accent);border-radius:50%;pointer-events:none;z-index:9998;transition:all .08s ease;mix-blend-mode:difference}
+
+/* noise overlay */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:1;opacity:.4}
+
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1.5rem 3rem;border-bottom:1px solid transparent;transition:all .3s ease}
+nav.scrolled{background:rgba(10,10,11,.9);backdrop-filter:blur(12px);border-color:var(--line)}
+.nav-logo{font-size:1.1rem;font-weight:800;letter-spacing:-.02em;color:var(--text)}
+.nav-logo span{color:var(--accent)}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);text-decoration:none;letter-spacing:.08em;transition:color .2s}
+.nav-links a:hover{color:var(--accent)}
+.nav-cta{font-family:var(--font-mono);font-size:.75rem;padding:.5rem 1.25rem;border:1px solid var(--accent);color:var(--accent);text-decoration:none;letter-spacing:.06em;transition:all .2s}
+.nav-cta:hover{background:var(--accent);color:var(--bg)}
+
+/* hero */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:0 3rem 4rem;position:relative;overflow:hidden}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:80px 80px;opacity:.3;mask-image:radial-gradient(ellipse 80% 60% at 50% 100%,black,transparent)}
+.hero-tag{font-family:var(--font-mono);font-size:.7rem;color:var(--accent);letter-spacing:.15em;margin-bottom:1.5rem;opacity:0;animation:fadeUp .6s .2s forwards}
+.hero-name{font-size:clamp(3.5rem,9vw,8rem);font-weight:800;line-height:.95;letter-spacing:-.04em;margin-bottom:1rem}
+.hero-name .line{display:block;overflow:hidden}
+.hero-name .line span{display:block;transform:translateY(110%);animation:slideUp .8s cubic-bezier(.16,1,.3,1) forwards}
+.hero-name .line:nth-child(1) span{animation-delay:.1s}
+.hero-name .line:nth-child(2) span{animation-delay:.2s}
+.hero-name em{color:var(--accent);font-style:normal}
+.hero-sub{font-family:var(--font-mono);font-size:.85rem;color:var(--muted);max-width:480px;line-height:1.7;opacity:0;animation:fadeUp .6s .7s forwards;margin-bottom:2.5rem}
+.hero-pills{display:flex;gap:.75rem;flex-wrap:wrap;opacity:0;animation:fadeUp .6s .9s forwards}
+.pill{font-family:var(--font-mono);font-size:.7rem;padding:.4rem .9rem;border:1px solid var(--line);color:var(--muted);letter-spacing:.05em;transition:all .2s}
+.pill:hover{border-color:var(--accent);color:var(--accent)}
+.hero-scroll{position:absolute;bottom:2rem;right:3rem;font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;writing-mode:vertical-rl;opacity:0;animation:fadeUp .6s 1.2s forwards}
+
+/* sections */
+section{padding:6rem 3rem;border-top:1px solid var(--line);position:relative;z-index:2}
+.sec-label{font-family:var(--font-mono);font-size:.65rem;color:var(--accent);letter-spacing:.15em;margin-bottom:3rem;display:flex;align-items:center;gap:1rem}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--line)}
+
+/* services */
+.services-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line)}
+.svc{background:var(--bg);padding:2.5rem;transition:background .2s}
+.svc:hover{background:var(--bg2)}
+.svc-num{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-bottom:1.5rem;letter-spacing:.08em}
+.svc-title{font-size:1.4rem;font-weight:700;margin-bottom:.75rem;line-height:1.2}
+.svc-desc{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);line-height:1.8;margin-bottom:1.5rem}
+.svc-tags{display:flex;gap:.5rem;flex-wrap:wrap}
+.tag{font-family:var(--font-mono);font-size:.6rem;padding:.25rem .6rem;background:var(--bg3);color:var(--muted);letter-spacing:.05em}
+.svc-accent{border-top:2px solid var(--accent)}
+.svc-accent .svc-title em{color:var(--accent);font-style:normal}
+
+/* portfolio samples */
+.samples-list{display:flex;flex-direction:column;gap:1px;background:var(--line)}
+.sample{background:var(--bg);padding:2rem 2.5rem;display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:start;transition:background .2s;cursor:pointer}
+.sample:hover{background:var(--bg2)}
+.sample-cat{font-family:var(--font-mono);font-size:.6rem;color:var(--muted);letter-spacing:.1em;margin-bottom:.5rem}
+.sample-title{font-size:1.1rem;font-weight:700;margin-bottom:.5rem}
+.sample-excerpt{font-family:var(--font-serif);font-size:.85rem;color:var(--muted);line-height:1.7;font-style:italic}
+.sample-badge{font-family:var(--font-mono);font-size:.6rem;padding:.3rem .7rem;white-space:nowrap;letter-spacing:.06em;align-self:flex-start}
+.badge-qa{border:1px solid #5af5c8;color:var(--accent2)}
+.badge-content{border:1px solid #c8f55a;color:var(--accent)}
+.badge-narrative{border:1px solid #c85af5;color:#c85af5}
+.badge-loc{border:1px solid #f5c85a;color:#f5c85a}
+
+/* about / stats */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start}
+.about-text h2{font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:800;line-height:1.1;letter-spacing:-.03em;margin-bottom:1.5rem}
+.about-text h2 em{color:var(--accent);font-style:normal}
+.about-text p{font-family:var(--font-serif);color:var(--muted);line-height:1.9;font-size:.95rem;margin-bottom:1rem}
+.stats-col{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.stat-box{background:var(--bg);padding:2rem;text-align:center}
+.stat-box .num{font-size:2.5rem;font-weight:800;color:var(--accent);letter-spacing:-.04em}
+.stat-box .lbl{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.08em;margin-top:.25rem}
+
+/* why me */
+.reasons{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
+.reason{background:var(--bg);padding:2rem}
+.reason-icon{font-family:var(--font-mono);font-size:1.5rem;color:var(--accent);margin-bottom:1rem}
+.reason h3{font-size:1rem;font-weight:700;margin-bottom:.5rem}
+.reason p{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);line-height:1.7}
+
+/* contact */
+.contact-inner{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+.contact-text h2{font-size:clamp(2rem,4vw,3.5rem);font-weight:800;line-height:1;letter-spacing:-.04em;margin-bottom:1.5rem}
+.contact-text h2 em{color:var(--accent);font-style:normal;display:block}
+.contact-text p{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);line-height:1.8;margin-bottom:2rem}
+.contact-links{display:flex;flex-direction:column;gap:.75rem}
+.contact-link{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border:1px solid var(--line);text-decoration:none;color:var(--text);transition:all .2s;font-family:var(--font-mono);font-size:.75rem}
+.contact-link:hover{border-color:var(--accent);background:rgba(200,245,90,.05)}
+.contact-link span{color:var(--muted)}
+.contact-link:hover span{color:var(--accent)}
+.contact-form-side{display:flex;flex-direction:column;gap:.75rem}
+.availability{padding:1.5rem;border:1px solid var(--line);background:var(--bg2)}
+.avail-dot{display:inline-block;width:8px;height:8px;background:var(--accent);border-radius:50%;margin-right:.5rem;animation:pulse 2s infinite}
+.avail-label{font-family:var(--font-mono);font-size:.75rem;color:var(--accent);margin-bottom:.25rem}
+.avail-desc{font-family:var(--font-mono);font-size:.65rem;color:var(--muted)}
+.services-list{display:flex;flex-direction:column;gap:.5rem;margin-top:1rem}
+.service-item{font-family:var(--font-mono);font-size:.7rem;color:var(--muted);padding:.5rem 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.service-item span{color:var(--accent)}
+
+/* footer */
+footer{padding:2rem 3rem;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;z-index:2;position:relative}
+.footer-copy{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.05em}
+.footer-copy em{color:var(--accent);font-style:normal}
+
+/* animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{transform:translateY(110%)}to{transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* scroll reveal */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* responsive */
+@media(max-width:900px){
+  nav{padding:1.25rem 1.5rem}
+  .hero{padding:0 1.5rem 3rem}
+  .hero-name{font-size:clamp(2.8rem,12vw,5rem)}
+  section{padding:4rem 1.5rem}
+  .services-grid,.about-grid,.contact-inner,.reasons{grid-template-columns:1fr}
+  .stats-col{grid-template-columns:repeat(4,1fr)}
+  footer{flex-direction:column;gap:1rem;text-align:center;padding:1.5rem}
+  .nav-links{display:none}
+  .cursor,.cursor-ring{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav id="nav">
+  <div class="nav-logo">NARRA<span>TEK</span></div>
+  <ul class="nav-links">
+    <li><a href="#services">services</a></li>
+    <li><a href="#work">work</a></li>
+    <li><a href="#about">about</a></li>
+    <li><a href="#contact">contact</a></li>
+  </ul>
+  <a href="https://www.fiverr.com/narratek" target="_blank" class="nav-cta">hire me →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-grid"></div>
+  <div class="hero-tag">// AVAILABLE FOR REMOTE CONTRACTS</div>
+  <h1 class="hero-name">
+    <span class="line"><span>Quality.</span></span>
+    <span class="line"><span>Words. <em>Worlds.</em></span></span>
+  </h1>
+  <p class="hero-sub">Senior QA Specialist & iGaming veteran. Polish localization expert. Narrative designer. Content writer. 7 years building better digital experiences — remotely, globally.</p>
+  <div class="hero-pills">
+    <span class="pill">iGaming QA</span>
+    <span class="pill">Polish Localization</span>
+    <span class="pill">Narrative Design</span>
+    <span class="pill">Technical Writing</span>
+    <span class="pill">SEO Content</span>
+  </div>
+  <div class="hero-scroll">scroll ↓</div>
+</section>
+
+<!-- SERVICES -->
+<section id="services">
+  <div class="sec-label">01 — SERVICES</div>
+  <div class="services-grid reveal">
+    <div class="svc svc-accent">
+      <div class="svc-num">01 / QA TESTING</div>
+      <div class="svc-title"><em>Manual & Functional</em> QA</div>
+      <div class="svc-desc">7 years in iGaming platforms. Regression testing, exploratory testing, release sign-off. Bug reports that developers actually use. Checklist discipline meets investigative instinct.</div>
+      <div class="svc-tags"><span class="tag">iGaming</span><span class="tag">Manual QA</span><span class="tag">Regression</span><span class="tag">Bug Reports</span><span class="tag">Test Plans</span></div>
+    </div>
+    <div class="svc">
+      <div class="svc-num">02 / LOCALIZATION</div>
+      <div class="svc-title">Polish <em style="color:var(--accent2);font-style:normal">Localization</em> & LQA</div>
+      <div class="svc-desc">Native Polish. Games, casino platforms, legal compliance documents. Translation + in-context testing. The EU market done right — not just translated, actually tested.</div>
+      <div class="svc-tags"><span class="tag">PL Native</span><span class="tag">LQA</span><span class="tag">EU Compliance</span><span class="tag">Casino</span><span class="tag">Games</span></div>
+    </div>
+    <div class="svc">
+      <div class="svc-num">03 / CONTENT</div>
+      <div class="svc-title">Content & <em style="color:#f5c85a;font-style:normal">Technical</em> Writing</div>
+      <div class="svc-desc">SEO blog posts, API documentation, iGaming copy, UX text. Writing that ranks, converts, and doesn't make developers cringe. Structured thinking turned into clear prose.</div>
+      <div class="svc-tags"><span class="tag">SEO</span><span class="tag">Tech Docs</span><span class="tag">iGaming Copy</span><span class="tag">API Guides</span></div>
+    </div>
+    <div class="svc">
+      <div class="svc-num">04 / NARRATIVE</div>
+      <div class="svc-title">Narrative <em style="color:#c85af5;font-style:normal">Design</em></div>
+      <div class="svc-desc">Game writing, dialogue systems, character voice, quest design. From one-liner barks to branching storylines. Characters that players remember. Worlds worth exploring.</div>
+      <div class="svc-tags"><span class="tag">Dialogue</span><span class="tag">Quest Design</span><span class="tag">Characters</span><span class="tag">World Building</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- WORK SAMPLES -->
+<section id="work">
+  <div class="sec-label">02 — SELECTED WORK</div>
+  <div class="samples-list reveal">
+    <div class="sample">
+      <div>
+        <div class="sample-cat">QA TESTING · iGAMING</div>
+        <div class="sample-title">Casino Lobby — Test Plan & Critical Bug Reports</div>
+        <div class="sample-excerpt">"Deposit confirmation not showing after successful transaction. Player unaware transaction succeeded — may submit duplicate deposits." Critical severity, P1 fix before release.</div>
+      </div>
+      <span class="sample-badge badge-qa">QA</span>
+    </div>
+    <div class="sample">
+      <div>
+        <div class="sample-cat">SEO CONTENT · iGAMING</div>
+        <div class="sample-title">Top Licensed Online Casinos in Poland — 2024 Guide</div>
+        <div class="sample-excerpt">"Poland's online gambling market is one of the most tightly regulated in Europe. Only operators licensed by the Ministry of Finance are legally allowed to offer casino games to Polish players."</div>
+      </div>
+      <span class="sample-badge badge-content">Content</span>
+    </div>
+    <div class="sample">
+      <div>
+        <div class="sample-cat">TECHNICAL WRITING · API</div>
+        <div class="sample-title">Payment Gateway Integration Guide — Developer Documentation</div>
+        <div class="sample-excerpt">POST /v1/deposit authentication flow, response code table, error handling patterns. Written for developers, reviewed for clarity. No jargon where none is needed.</div>
+      </div>
+      <span class="sample-badge badge-content">Tech Docs</span>
+    </div>
+    <div class="sample">
+      <div>
+        <div class="sample-cat">NARRATIVE DESIGN · SCI-FI RPG</div>
+        <div class="sample-title">VERA — AI Companion Character Voice Sheet</div>
+        <div class="sample-excerpt">"You're smaller than the manifest suggested. That's not an insult — smaller tends to survive longer out here." Economical. Unsentimental. Referential. Layered.</div>
+      </div>
+      <span class="sample-badge badge-narrative">Narrative</span>
+    </div>
+    <div class="sample">
+      <div>
+        <div class="sample-cat">NARRATIVE DESIGN · QUEST</div>
+        <div class="sample-title">"The Last Broadcast" — Quest Design Document</div>
+        <div class="sample-excerpt">A looping distress signal that was never a call for help. 3-branch outcome system, world-state consequence, environmental storytelling. ~25 min playtime.</div>
+      </div>
+      <span class="sample-badge badge-narrative">Narrative</span>
+    </div>
+    <div class="sample">
+      <div>
+        <div class="sample-cat">LOCALIZATION · iGAMING</div>
+        <div class="sample-title">Polish Locale QA — Casino Platform Compliance Testing</div>
+        <div class="sample-excerpt">"Bonus headline in Polish but T&C body remains in English. Legal disclaimer partially untranslated." Compliance risk flagged before PL market launch. Major severity, P2.</div>
+      </div>
+      <span class="sample-badge badge-loc">Localization</span>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="sec-label">03 — ABOUT</div>
+  <div class="about-grid reveal">
+    <div class="about-text">
+      <h2>7 years.<br>One <em>rare</em> combination.</h2>
+      <p>I'm K. — a multi-discipline specialist who started in iGaming QA and never stopped adding tools to the belt. Polish native, remote worker, games obsessive.</p>
+      <p>The combination of manual QA expertise, native Polish, and genuine game industry knowledge is rare. Most QA testers can't write. Most writers can't test. Most localizers don't play games.</p>
+      <p>I do all three — and I've been doing it for seven years, working with Tier-1 casino and sportsbook platforms across European markets.</p>
+    </div>
+    <div class="stats-col">
+      <div class="stat-box"><div class="num">7</div><div class="lbl">Years exp.</div></div>
+      <div class="stat-box"><div class="num">4</div><div class="lbl">Core skills</div></div>
+      <div class="stat-box"><div class="num">EU</div><div class="lbl">PL market</div></div>
+      <div class="stat-box"><div class="num">∞</div><div class="lbl">Remote</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY ME -->
+<section>
+  <div class="sec-label">04 — WHY NARRATEK</div>
+  <div class="reasons reveal">
+    <div class="reason">
+      <div class="reason-icon">[01]</div>
+      <h3>Rare skill stack</h3>
+      <p>Polish native + iGaming QA + game writing. Almost nobody on Fiverr or Upwork has this exact combination. You stop searching when you find the right person.</p>
+    </div>
+    <div class="reason">
+      <div class="reason-icon">[02]</div>
+      <h3>No hand-holding needed</h3>
+      <p>7 years in fast-paced iGaming environments. I read tickets, ask one question, and deliver. Senior experience means senior-level independence.</p>
+    </div>
+    <div class="reason">
+      <div class="reason-icon">[03]</div>
+      <h3>EU compliance ready</h3>
+      <p>Polish gambling regulations, GDPR-aware copy, responsible gambling standards. I know what gets platforms in trouble and how to avoid it.</p>
+    </div>
+    <div class="reason">
+      <div class="reason-icon">[04]</div>
+      <h3>Game-native thinking</h3>
+      <p>I don't just test games or write about them — I play them. MGS, Monster Hunter, Destiny 2. Real player perspective built into every deliverable.</p>
+    </div>
+    <div class="reason">
+      <div class="reason-icon">[05]</div>
+      <h3>Remote, worldwide</h3>
+      <p>Your timezone. Your tools. Your process. Async-first, documentation-heavy, zero meetings needed unless you want them.</p>
+    </div>
+    <div class="reason">
+      <div class="reason-icon">[06]</div>
+      <h3>Available now</h3>
+      <p>Not "in 3 weeks". Not "at capacity". Right now, ready to start, motivated to deliver. First client gets full attention.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="sec-label">05 — CONTACT</div>
+  <div class="contact-inner reveal">
+    <div class="contact-text">
+      <h2>Let's build <em>something.</em></h2>
+      <p>Whether it's a one-off QA cycle, a full localization project, or a narrative design collaboration — I'm ready. Send a message, I'll respond within 24 hours.</p>
+      <div class="contact-links">
+        <a href="https://www.fiverr.com/narratek" target="_blank" class="contact-link">
+          Fiverr — narratek <span>→</span>
+        </a>
+        <a href="https://www.linkedin.com/in/narratek" target="_blank" class="contact-link">
+          LinkedIn <span>→</span>
+        </a>
+        <a href="mailto:narratek@gmail.com" class="contact-link">
+          Email me directly <span>→</span>
+        </a>
+      </div>
+    </div>
+    <div class="contact-form-side">
+      <div class="availability">
+        <div class="avail-label"><span class="avail-dot"></span>Available for new projects</div>
+        <div class="avail-desc">Currently taking on remote contracts — QA, localization, content & narrative</div>
+        <div class="services-list">
+          <div class="service-item">Manual QA — iGaming <span>from $25/hr</span></div>
+          <div class="service-item">Polish Localization <span>from $0.08/word</span></div>
+          <div class="service-item">Content Writing <span>from $30/article</span></div>
+          <div class="service-item">Narrative Design <span>from $50/scene</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-copy">© 2024 <em>NARRATEK</em> — K. All rights reserved.</div>
+  <div class="footer-copy">Remote worldwide · Warsaw, Poland · <em>Available now</em></div>
+</footer>
+
+<script>
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx - 4 + 'px';
+  cursor.style.top = my - 4 + 'px';
+});
+
+function animRing() {
+  rx += (mx - rx - 16) * 0.12;
+  ry += (my - ry - 16) * 0.12;
+  ring.style.left = rx + 'px';
+  ring.style.top = ry + 'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+document.querySelectorAll('a, button, .sample, .svc').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cursor.style.transform = 'scale(2.5)';
+    ring.style.transform = 'scale(1.5)';
+  });
+  el.addEventListener('mouseleave', () => {
+    cursor.style.transform = 'scale(1)';
+    ring.style.transform = 'scale(1)';
+  });
+});
+
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', scrollY > 60);
+});
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
