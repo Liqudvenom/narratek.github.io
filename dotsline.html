@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometric Fluid Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            background: #0a0a0f;
+            font-family: 'Segoe UI', sans-serif;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+            cursor: none;
+        }
+        
+        /* Custom Cursor */
+        #cursor {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border: 2px solid #00d4ff;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s ease;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
+        }
+        #cursor.active {
+            background: rgba(255, 100, 100, 0.2);
+            border-color: #ff006e;
+            box-shadow: 0 0 50px rgba(255, 0, 110, 0.8);
+            transform: translate(-50%, -50%) rotate(45deg) scale(1.3);
+        }
+        
+        /* Stats Panel - Top Left */
+        #statsPanel {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            width: 280px;
+            background: linear-gradient(135deg, rgba(10, 10, 20, 0.95), rgba(20, 20, 35, 0.95));
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+            padding: 25px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), inset 0 0 30px rgba(0, 212, 255, 0.05);
+        }
+        #statsPanel h3 {
+            color: #00d4ff;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .metric {
+            margin: 18px 0;
+            position: relative;
+        }
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .metric-label {
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .metric-value {
+            color: #00d4ff;
+            font-weight: bold;
+            font-size: 15px;
+            font-family: 'Courier New', monospace;
+        }
+        .metric-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 212, 255, 0.1);
+            position: relative;
+            clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+        }
+        .metric-bar {
+            height: 100%;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 200%; }
+        }
+        .bar-fps { background: linear-gradient(90deg, #00d4ff, #0099ff); box-shadow: 0 0 10px #00d4ff; }
+        .bar-particles { background: linear-gradient(90deg, #ff006e, #ff4d9f); box-shadow: 0 0 10px #ff006e; }
+        .bar-connections { background: linear-gradient(90deg, #7000ff, #a64dff); box-shadow: 0 0 10px #7000ff; }
+        .bar-speed { background: linear-gradient(90deg, #00ff88, #00cc6a); box-shadow: 0 0 10px #00ff88; }
+        
+        /* Control Panel - Top Right */
+        #controlPanel {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            width: 320px;
+            background: linear-gradient(135deg, rgba(10, 10, 20, 0.95), rgba(20, 20, 35, 0.95));
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+            padding: 25px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), inset 0 0 30px rgba(0, 212, 255, 0.05);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s;
+        }
+        #controlPanel.hidden {
+            transform: translateX(370px);
+            opacity: 0;
+        }
+        
+        .section-title {
+            color: #00d4ff;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-align: center;
+            margin: 25px 0 15px;
+            font-weight: 600;
+            position: relative;
+        }
+        .section-title:first-child {
+            margin-top: 0;
+        }
+        .section-title::before,
+        .section-title::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 30px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00d4ff);
+        }
+        .section-title::before {
+            left: 0;
+        }
+        .section-title::after {
+            right: 0;
+            background: linear-gradient(270deg, transparent, #00d4ff);
+        }
+        
+        /* Preset Buttons */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .preset-btn {
+            padding: 15px 10px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(112, 0, 255, 0.1));
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .preset-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(0, 212, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+        }
+        .preset-btn:hover::before {
+            width: 200px;
+            height: 200px;
+        }
+        .preset-btn:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        .preset-btn.active {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(112, 0, 255, 0.3));
+            border-color: #00d4ff;
+            box-shadow: 0 0 25px rgba(0, 212, 255, 0.6);
+        }
+        
+        /* Sliders */
+        .slider-control {
+            margin: 15px 0;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .slider-label {
+            color: #888;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .slider-value {
+            color: #00d4ff;
+            font-weight: bold;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 212, 255, 0.1);
+            padding: 2px 8px;
+            clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, calc(100% - 3px) 100%, 0 calc(100% - 3px));
+        }
+        .slider-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(0, 212, 255, 0.1);
+            clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .slider-track::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
+            transition: all 0.2s;
+        }
+        .slider-track::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 25px rgba(0, 212, 255, 1);
+        }
+        .slider-track::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
+            transition: all 0.2s;
+        }
+        
+        /* Effect Buttons */
+        .effect-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .effect-btn {
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(255, 0, 110, 0.2), rgba(112, 0, 255, 0.2));
+            border: 1px solid rgba(255, 0, 110, 0.3);
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .effect-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 0, 110, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+        .effect-btn:hover::before {
+            width: 200px;
+            height: 200px;
+        }
+        .effect-btn:hover {
+            border-color: #ff006e;
+            box-shadow: 0 0 20px rgba(255, 0, 110, 0.5);
+            transform: translateY(-2px);
+        }
+        .effect-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Toggle Buttons */
+        .toggle-btn {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            border: none;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 6px 25px rgba(0, 212, 255, 0.6);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .toggle-btn:hover {
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 8px 35px rgba(0, 212, 255, 0.8);
+        }
+        #menuToggle {
+            top: 25px;
+            right: 25px;
+        }
+        #fullscreenBtn {
+            top: 90px;
+            right: 25px;
+            background: linear-gradient(135deg, #ff006e, #ff4d9f);
+            box-shadow: 0 6px 25px rgba(255, 0, 110, 0.6);
+        }
+        #fullscreenBtn:hover {
+            box-shadow: 0 8px 35px rgba(255, 0, 110, 0.8);
+        }
+        
+        /* Info Panel */
+        #infoPanel {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(112, 0, 255, 0.15));
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0 calc(100% - 15px), 0 15px);
+            padding: 15px 30px;
+            color: #00d4ff;
+            font-size: 13px;
+            backdrop-filter: blur(20px);
+            animation: pulse-glow 3s infinite;
+            text-align: center;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 30px rgba(0, 212, 255, 0.3); }
+            50% { box-shadow: 0 0 50px rgba(0, 212, 255, 0.6); }
+        }
+        
+        /* Shape Mode Toggle */
+        #shapeToggle {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            background: linear-gradient(135deg, rgba(112, 0, 255, 0.3), rgba(0, 212, 255, 0.3));
+            border: 1px solid rgba(112, 0, 255, 0.5);
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            padding: 12px 20px;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            backdrop-filter: blur(20px);
+            transition: all 0.3s;
+        }
+        #shapeToggle:hover {
+            border-color: #7000ff;
+            box-shadow: 0 0 25px rgba(112, 0, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fluidCanvas"></canvas>
+    <div id="cursor"></div>
+    
+    <!-- Stats Panel -->
+    <div id="statsPanel">
+        <h3>📊 Live Metrics</h3>
+        <div class="metric">
+            <div class="metric-header">
+                <span class="metric-label">FPS</span>
+                <span class="metric-value" id="fpsValue">60</span>
+            </div>
+            <div class="metric-bar-container">
+                <div class="metric-bar bar-fps" id="fpsBar" style="width: 100%"></div>
+            </div>
+        </div>
+        <div class="metric">
+            <div class="metric-header">
+                <span class="metric-label">Particles</span>
+                <span class="metric-value" id="particleValue">200</span>
+            </div>
+            <div class="metric-bar-container">
+                <div class="metric-bar bar-particles" id="particleBar" style="width: 40%"></div>
+            </div>
+        </div>
+        <div class="metric">
+            <div class="metric-header">
+                <span class="metric-label">Connections</span>
+                <span class="metric-value" id="connectionValue">0</span>
+            </div>
+            <div class="metric-bar-container">
+                <div class="metric-bar bar-connections" id="connectionBar" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="metric">
+            <div class="metric-header">
+                <span class="metric-label">Speed</span>
+                <span class="metric-value" id="speedValue">0.8x</span>
+            </div>
+            <div class="metric-bar-container">
+                <div class="metric-bar bar-speed" id="speedBar" style="width: 27%"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Control Panel -->
+    <div id="controlPanel">
+        <h3 class="section-title">Presets</h3>
+        <div class="preset-grid">
+            <div class="preset-btn active" data-preset="smooth">🌊 Smooth</div>
+            <div class="preset-btn" data-preset="chaos">⚡ Chaos</div>
+            <div class="preset-btn" data-preset="galaxy">🌌 Galaxy</div>
+            <div class="preset-btn" data-preset="pulse">💫 Pulse</div>
+            <div class="preset-btn" data-preset="rainbow">🌈 Rainbow</div>
+            <div class="preset-btn" data-preset="minimal">✨ Minimal</div>
+        </div>
+        
+        <h3 class="section-title">Fine Tune</h3>
+        <div class="slider-control">
+            <div class="slider-header">
+                <span class="slider-label">Particles</span>
+                <span class="slider-value" id="particleSliderValue">200</span>
+            </div>
+            <input type="range" class="slider-track" id="particleSlider" min="50" max="500" value="200" step="10">
+        </div>
+        <div class="slider-control">
+            <div class="slider-header">
+                <span class="slider-label">Speed</span>
+                <span class="slider-value" id="speedSliderValue">0.8x</span>
+            </div>
+            <input type="range" class="slider-track" id="speedSlider" min="0.1" max="3" value="0.8" step="0.1">
+        </div>
+        <div class="slider-control">
+            <div class="slider-header">
+                <span class="slider-label">Range</span>
+                <span class="slider-value" id="rangeSliderValue">140</span>
+            </div>
+            <input type="range" class="slider-track" id="rangeSlider" min="50" max="250" value="140" step="10">
+        </div>
+        <div class="slider-control">
+            <div class="slider-header">
+                <span class="slider-label">Mouse Force</span>
+                <span class="slider-value" id="forceSliderValue">12</span>
+            </div>
+            <input type="range" class="slider-track" id="forceSlider" min="0" max="50" value="12" step="1">
+        </div>
+        
+        <h3 class="section-title">Effects</h3>
+        <div class="effect-grid">
+            <button class="effect-btn" id="waveBtn">🌊 Wave</button>
+            <button class="effect-btn" id="tornadoBtn">🌪️ Tornado</button>
+            <button class="effect-btn" id="blackHoleBtn">🕳️ Black Hole</button>
+            <button class="effect-btn" id="fireworkBtn">🎆 Firework</button>
+        </div>
+    </div>
+    
+    <!-- Toggle Buttons -->
+    <button class="toggle-btn" id="menuToggle">☰</button>
+    <button class="toggle-btn" id="fullscreenBtn">⛶</button>
+    
+    <!-- Info Panel -->
+    <div id="infoPanel">
+        🖱️ Drag to Interact • Space = Explode • R = Reset
+    </div>
+    
+    <!-- Shape Toggle -->
+    <div id="shapeToggle">
+        Shape: <span id="shapeMode">Lines</span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('fluidCanvas');
+        const ctx = canvas.getContext('2d', { 
+            alpha: false,
+            desynchronized: true
+        });
+        
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        let config = {
+            particles: 200,
+            maxDist: 140,
+            speed: 0.8,
+            mouseForce: 12,
+            friction: 0.98,
+            colorMode: 'rainbow',
+            trailIntensity: 0.15,
+            particleSize: 2.5,
+            lineWidth: 1.5,
+            glowIntensity: 0.6,
+            shapeMode: 'lines' // 'lines', 'triangles', 'hexagons'
+        };
+
+        const presets = {
+            smooth: { particles: 200, maxDist: 140, speed: 0.8, mouseForce: 12, friction: 0.98, colorMode: 'rainbow', trailIntensity: 0.15 },
+            chaos: { particles: 400, maxDist: 100, speed: 2.5, mouseForce: 25, friction: 0.95, colorMode: 'fire', trailIntensity: 0.08 },
+            galaxy: { particles: 150, maxDist: 200, speed: 0.4, mouseForce: 8, friction: 0.99, colorMode: 'galaxy', trailIntensity: 0.2 },
+            pulse: { particles: 300, maxDist: 120, speed: 1.2, mouseForce: 18, friction: 0.96, colorMode: 'electric', trailIntensity: 0.1 },
+            rainbow: { particles: 250, maxDist: 160, speed: 1.0, mouseForce: 15, friction: 0.97, colorMode: 'rainbow', trailIntensity: 0.12 },
+            minimal: { particles: 80, maxDist: 180, speed: 0.5, mouseForce: 10, friction: 0.99, colorMode: 'minimal', trailIntensity: 0.25 }
+        };
+
+        const particles = [];
+        const mouse = { x: 0, y: 0, radius: 150, active: false };
+        let time = 0;
+        let frameCount = 0;
+        let lastFrameTime = performance.now();
+        let fps = 60;
+        let connectionCount = 0;
+        const maxConnections = 5000;
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.hue = Math.random() * 360;
+                this.connections = [];
+            }
+
+            update() {
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (mouse.active && dist < mouse.radius) {
+                    const force = (1 - dist / mouse.radius) * config.mouseForce;
+                    const angle = Math.atan2(dy, dx);
+                    this.vx += Math.cos(angle) * force * 0.1;
+                    this.vy += Math.sin(angle) * force * 0.1;
+                }
+
+                this.x += this.vx * config.speed;
+                this.y += this.vy * config.speed;
+                
+                this.vx *= config.friction;
+                this.vy *= config.friction;
+
+                if (this.x > canvas.width + 50) this.x = -50;
+                if (this.x < -50) this.x = canvas.width + 50;
+                if (this.y > canvas.height + 50) this.y = -50;
+                if (this.y < -50) this.y = canvas.height + 50;
+
+                this.hue = (this.hue + 0.3) % 360;
+                this.connections = [];
+            }
+        }
+
+        function getColor(hue, dist, alpha = 1) {
+            const intensity = 1 - dist / config.maxDist;
+            
+            switch(config.colorMode) {
+                case 'rainbow':
+                    return `hsla(${hue}, 85%, ${50 + intensity * 30}%, ${alpha * intensity * config.glowIntensity})`;
+                case 'fire':
+                    return `hsla(${20 + intensity * 40}, 100%, ${50 + intensity * 20}%, ${alpha * intensity * config.glowIntensity})`;
+                case 'galaxy':
+                    return `hsla(${240 + hue * 0.3}, 80%, ${40 + intensity * 30}%, ${alpha * intensity * config.glowIntensity})`;
+                case 'electric':
+                    return `hsla(${180 + Math.sin(time * 0.01) * 60}, 100%, ${60 + intensity * 20}%, ${alpha * intensity * config.glowIntensity})`;
+                case 'minimal':
+                    return `rgba(0, 212, 255, ${alpha * intensity * config.glowIntensity})`;
+            }
+        }
+
+        function init() {
+            particles.length = 0;
+            for (let i = 0; i < config.particles; i++) {
+                particles.push(new Particle(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height
+                ));
+            }
+        }
+
+        function drawTriangle(p1, p2, p3, avgHue, avgDist) {
+            const gradient = ctx.createLinearGradient(
+                (p1.x + p2.x + p3.x) / 3, (p1.y + p2.y + p3.y) / 3,
+                p1.x, p1.y
+            );
+            gradient.addColorStop(0, getColor(avgHue, avgDist, 0.3));
+            gradient.addColorStop(1, getColor(avgHue, avgDist, 0.1));
+            
+            ctx.fillStyle = gradient;
+            ctx.strokeStyle = getColor(avgHue, avgDist, 0.8);
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.lineTo(p3.x, p3.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        function updateStats() {
+            document.getElementById('fpsValue').textContent = fps;
+            document.getElementById('fpsBar').style.width = `${(fps / 60) * 100}%`;
+            
+            document.getElementById('particleValue').textContent = particles.length;
+            document.getElementById('particleBar').style.width = `${(particles.length / 500) * 100}%`;
+            
+            document.getElementById('connectionValue').textContent = connectionCount;
+            document.getElementById('connectionBar').style.width = `${Math.min((connectionCount / maxConnections) * 100, 100)}%`;
+            
+            document.getElementById('speedValue').textContent = config.speed.toFixed(1) + 'x';
+            document.getElementById('speedBar').style.width = `${(config.speed / 3) * 100}%`;
+        }
+
+        function animate() {
+            time++;
+            frameCount++;
+            
+            const currentTime = performance.now();
+            if (currentTime >= lastFrameTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (currentTime - lastFrameTime));
+                frameCount = 0;
+                lastFrameTime = currentTime;
+                updateStats();
+            }
+            
+            ctx.fillStyle = `rgba(10, 10, 15, ${config.trailIntensity})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => p.update());
+
+            connectionCount = 0;
+            
+            // Build connection graph
+            for (let i = 0; i < particles.length; i++) {
+                const p1 = particles[i];
+                for (let j = i + 1; j < particles.length; j++) {
+                    const p2 = particles[j];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < config.maxDist) {
+                        p1.connections.push(j);
+                        p2.connections.push(i);
+                    }
+                }
+            }
+
+            // Draw based on shape mode
+            if (config.shapeMode === 'triangles') {
+                const drawn = new Set();
+                particles.forEach((p1, i) => {
+                    p1.connections.forEach(j => {
+                        if (j > i) {
+                            const p2 = particles[j];
+                            const shared = p1.connections.filter(k => p2.connections.includes(k) && k > j);
+                            
+                            shared.forEach(k => {
+                                const key = [i, j, k].sort().join(',');
+                                if (!drawn.has(key)) {
+                                    drawn.add(key);
+                                    connectionCount++;
+                                    const p3 = particles[k];
+                                    const avgHue = (p1.hue + p2.hue + p3.hue) / 3;
+                                    const dx1 = p2.x - p1.x, dy1 = p2.y - p1.y;
+                                    const dx2 = p3.x - p1.x, dy2 = p3.y - p1.y;
+                                    const avgDist = (Math.sqrt(dx1*dx1 + dy1*dy1) + Math.sqrt(dx2*dx2 + dy2*dy2)) / 2;
+                                    drawTriangle(p1, p2, p3, avgHue, avgDist);
+                                }
+                            });
+                        }
+                    });
+                });
+            } else if (config.shapeMode === 'hexagons') {
+                particles.forEach((p, i) => {
+                    if (p.connections.length >= 3) {
+                        ctx.strokeStyle = getColor(p.hue, config.maxDist * 0.5, 0.6);
+                        ctx.lineWidth = 2;
+                        
+                        const angles = p.connections.slice(0, 6).map((idx, j) => {
+                            const other = particles[idx];
+                            return Math.atan2(other.y - p.y, other.x - p.x);
+                        }).sort((a, b) => a - b);
+                        
+                        ctx.beginPath();
+                        angles.forEach((angle, j) => {
+                            const radius = config.maxDist * 0.3;
+                            const x = p.x + Math.cos(angle) * radius;
+                            const y = p.y + Math.sin(angle) * radius;
+                            if (j === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                            connectionCount++;
+                        });
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
+                });
+            } else {
+                // Lines mode
+                for (let i = 0; i < particles.length; i++) {
+                    const p1 = particles[i];
+                    
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const p2 = particles[j];
+                        const dx = p2.x - p1.x;
+                        const dy = p2.y - p1.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < config.maxDist) {
+                            connectionCount++;
+                            const gradient = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
+                            gradient.addColorStop(0, getColor(p1.hue, dist, 0.8));
+                            gradient.addColorStop(1, getColor(p2.hue, dist, 0.8));
+                            
+                            ctx.strokeStyle = gradient;
+                            ctx.lineWidth = config.lineWidth * (1 - dist / config.maxDist);
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            // Draw particles
+            particles.forEach(p => {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = getColor(p.hue, 0);
+                ctx.fillStyle = getColor(p.hue, 0, 1);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, config.particleSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // Mouse handling
+        const cursor = document.getElementById('cursor');
+        
+        function updateMouse(e) {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        }
+
+        canvas.addEventListener('mousemove', updateMouse);
+        canvas.addEventListener('mousedown', () => {
+            mouse.active = true;
+            cursor.classList.add('active');
+        });
+        canvas.addEventListener('mouseup', () => {
+            mouse.active = false;
+            cursor.classList.remove('active');
+        });
+        canvas.addEventListener('mouseleave', () => {
+            mouse.active = false;
+            cursor.classList.remove('active');
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            updateMouse(e.touches[0]);
+            mouse.active = true;
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            updateMouse(e.touches[0]);
+        });
+        canvas.addEventListener('touchend', () => mouse.active = false);
+
+        // Preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const preset = btn.dataset.preset;
+                Object.assign(config, presets[preset]);
+                
+                document.getElementById('particleSlider').value = config.particles;
+                document.getElementById('particleSliderValue').textContent = config.particles;
+                document.getElementById('speedSlider').value = config.speed;
+                document.getElementById('speedSliderValue').textContent = config.speed.toFixed(1) + 'x';
+                document.getElementById('rangeSlider').value = config.maxDist;
+                document.getElementById('rangeSliderValue').textContent = config.maxDist;
+                document.getElementById('forceSlider').value = config.mouseForce;
+                document.getElementById('forceSliderValue').textContent = config.mouseForce;
+                
+                init();
+                updateStats();
+            });
+        });
+
+        // Sliders
+        document.getElementById('particleSlider').addEventListener('input', (e) => {
+            config.particles = parseInt(e.target.value);
+            document.getElementById('particleSliderValue').textContent = config.particles;
+            init();
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            config.speed = parseFloat(e.target.value);
+            document.getElementById('speedSliderValue').textContent = config.speed.toFixed(1) + 'x';
+        });
+
+        document.getElementById('rangeSlider').addEventListener('input', (e) => {
+            config.maxDist = parseInt(e.target.value);
+            document.getElementById('rangeSliderValue').textContent = config.maxDist;
+        });
+
+        document.getElementById('forceSlider').addEventListener('input', (e) => {
+            config.mouseForce = parseInt(e.target.value);
+            document.getElementById('forceSliderValue').textContent = config.mouseForce;
+        });
+
+        // Effect buttons
+        document.getElementById('waveBtn').addEventListener('click', () => {
+            particles.forEach((p, i) => {
+                const angle = (i / particles.length) * Math.PI * 2;
+                p.vx += Math.cos(angle) * 5;
+                p.vy += Math.sin(angle) * 5;
+            });
+        });
+
+        document.getElementById('tornadoBtn').addEventListener('click', () => {
+            particles.forEach(p => {
+                const dx = p.x - canvas.width / 2;
+                const dy = p.y - canvas.height / 2;
+                const angle = Math.atan2(dy, dx) + Math.PI / 2;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const force = 15 / (1 + dist * 0.01);
+                p.vx += Math.cos(angle) * force;
+                p.vy += Math.sin(angle) * force;
+            });
+        });
+
+        document.getElementById('blackHoleBtn').addEventListener('click', () => {
+            particles.forEach(p => {
+                const dx = canvas.width / 2 - p.x;
+                const dy = canvas.height / 2 - p.y;
+                const angle = Math.atan2(dy, dx);
+                p.vx += Math.cos(angle) * 8;
+                p.vy += Math.sin(angle) * 8;
+            });
+        });
+
+        document.getElementById('fireworkBtn').addEventListener('click', () => {
+            particles.forEach(p => {
+                const angle = Math.random() * Math.PI * 2;
+                const force = 8 + Math.random() * 12;
+                p.vx = Math.cos(angle) * force;
+                p.vy = Math.sin(angle) * force;
+                p.x = canvas.width / 2;
+                p.y = canvas.height / 2;
+            });
+        });
+
+        // Menu toggle
+        const controlPanel = document.getElementById('controlPanel');
+        const menuToggle = document.getElementById('menuToggle');
+        let menuOpen = true;
+        
+        menuToggle.addEventListener('click', () => {
+            menuOpen = !menuOpen;
+            controlPanel.classList.toggle('hidden');
+            menuToggle.textContent = menuOpen ? '☰' : '✕';
+        });
+
+        // Fullscreen
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Shape mode toggle
+        const shapeToggle = document.getElementById('shapeToggle');
+        const shapeModes = ['lines', 'triangles', 'hexagons'];
+        let shapeModeIndex = 0;
+        
+        shapeToggle.addEventListener('click', () => {
+            shapeModeIndex = (shapeModeIndex + 1) % shapeModes.length;
+            config.shapeMode = shapeModes[shapeModeIndex];
+            document.getElementById('shapeMode').textContent = 
+                config.shapeMode.charAt(0).toUpperCase() + config.shapeMode.slice(1);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                document.getElementById('fireworkBtn').click();
+            } else if (e.code === 'KeyR') {
+                init();
+            } else if (e.code === 'KeyS') {
+                shapeToggle.click();
+            }
+        });
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
